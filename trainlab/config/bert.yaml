@@ -1,0 +1,14 @@
+TRAINER:
+  NAME: MyTrainer
+  LR: 0.001
+  BATCH_SIZE: 32
+
+MODEL:
+  NAME: ResNet50
+  NUM_CLASSES: 10
+
+DATASET:
+  NAME: StackOverflowDataset
+  ROOT: "/data/lj/task/trainlab/data"
+  SPLIT: "train"
+
