@@ -12,7 +12,7 @@ from trainlab.utils import Logger
 from trainlab.datasets.stackoverflowdataset import StackOverflowDataset
 from trainlab.model.bert import BertForSequenceClassification
 from trainlab.trainers.bert_trainer import BERTTrainer
-
+from trainlab.trainers.lora_trainner import LORATrainer
 
 
 def parse_args():
@@ -32,6 +32,8 @@ def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=F
         trainer: Trainer 实例
         evaluate: 是否在每个 epoch 结束后做评估
     """
+    torch.cuda.empty_cache()
+
     # 每个进程调用 trainer.train 并传入 rank
     trainer.train(rank=rank, world_size=world_size,train_dataset = train_dataset, val_dataset=val_dataset,collate_fn=train_dataset.collate_fn,evaluate=evaluate)
 
