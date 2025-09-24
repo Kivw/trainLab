@@ -3,3 +3,5 @@
 
 # 忽略项目中所有 __pycache__ 文件夹
 **/__pycache__/
+
+/logs/
