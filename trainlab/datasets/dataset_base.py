@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 from datasets import load_from_disk
 
+
 class DatasetBase(Dataset):
     """
     一次性加载所有数据到内存，适用于数据流较小的数据
@@ -21,6 +22,7 @@ class DatasetBase(Dataset):
 
     def __init__(self, transform=None, cache_in_memory=False):
         super().__init__()
+
         self.transform = transform
         self.data = None
         self.cache_in_memory = cache_in_memory

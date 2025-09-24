@@ -286,6 +286,8 @@ class BertForSequenceClassification(nn.Module):
         
         print(f"Loading weights from pretrained model: {model_type}")
         
+
+        
         if config_args:
             # config = BertConfig(**config_args)
             config = BertConfig()
@@ -297,7 +299,6 @@ class BertForSequenceClassification(nn.Module):
         model = cls(config)        
         sd = model.state_dict()
         sd_keys = sd.keys()
-        
         # init huggingface/transformers model
         model_hf = HFBertForSequenceClassification.from_pretrained(pretrained_model_name_or_path=model_type, num_labels=config.n_classes)
         sd_hf = model_hf.state_dict()

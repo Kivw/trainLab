@@ -10,14 +10,48 @@ import torch.nn as nn
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
-
+import torch.optim as optim
+import torch.optim.lr_scheduler as lr_scheduler
 from tqdm import tqdm
+
+SCHEDULER_MAP = {
+    "StepLR": lr_scheduler.StepLR,
+    "MultiStepLR": lr_scheduler.MultiStepLR,
+    "ExponentialLR": lr_scheduler.ExponentialLR,
+    "CosineAnnealingLR": lr_scheduler.CosineAnnealingLR,
+    "CosineAnnealingWarmRestarts": lr_scheduler.CosineAnnealingWarmRestarts,
+    "ReduceLROnPlateau": lr_scheduler.ReduceLROnPlateau,
+    "CyclicLR": lr_scheduler.CyclicLR,
+    "OneCycleLR": lr_scheduler.OneCycleLR,
+    "LambdaLR": lr_scheduler.LambdaLR,
+    "PolynomialLR": lr_scheduler.PolynomialLR if hasattr(lr_scheduler, "PolynomialLR") else None,  # 新版才有
+}
+
+OPTIMIZER_MAP = {
+            "Adam": optim.Adam,
+            "SGD": optim.SGD,
+            "AdamW": optim.AdamW,
+        }
+
+LOSS_FUNCTION_MAP = {
+    "CrossEntropyLoss": nn.CrossEntropyLoss,
+    "MSELoss": nn.MSELoss,
+    "L1Loss": nn.L1Loss,
+    "BCEWithLogitsLoss": nn.BCEWithLogitsLoss,
+    "BCELoss": nn.BCELoss,
+    "KLDivLoss": nn.KLDivLoss,
+    "NLLLoss": nn.NLLLoss,
+    "SmoothL1Loss": nn.SmoothL1Loss,
+    "HuberLoss": nn.HuberLoss,
+    # 可以根据需要继续添加
+}
+
 
 class BaseTrainer:
     def __init__(
         self, 
         model, 
-        loss_fn=None, 
+        loss_fn_class=None, 
         epochs=1, 
         optimizer_class=None, 
         optimizer_kwargs={'lr':1e-3},
@@ -36,13 +70,15 @@ class BaseTrainer:
         scheduler_class: 学习率调度器类，如 torch.optim.lr_scheduler.StepLR
         scheduler_kwargs: 调度器初始化参数字典
         """
+
         self.model = model
         self.epochs = epochs
-        self.loss_fn = loss_fn if loss_fn else nn.CrossEntropyLoss()
+        
+        self.loss_fn = LOSS_FUNCTION_MAP[loss_fn_class]()
 
-        self.optimizer_class = optimizer_class
+        self.optimizer_class = OPTIMIZER_MAP[optimizer_class]
         self.optimizer_kwargs = optimizer_kwargs or {}
-        self.scheduler_class = scheduler_class
+        self.scheduler_class = SCHEDULER_MAP[scheduler_class]
         self.scheduler_kwargs = scheduler_kwargs or {}
 
         # 每个进程的 optimizer 和 scheduler 会在 setup 中实例化
@@ -56,7 +92,8 @@ class BaseTrainer:
         self.save = save
 
     def setup(self, rank, world_size):
-        
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '29500'
         # 设置随机种子，确保每个进程的初始化参数一致
         torch.manual_seed(42)        # CPU
         torch.cuda.manual_seed(42)   # GPU

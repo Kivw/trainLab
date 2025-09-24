@@ -47,7 +47,8 @@ def build_from_cfg(cfg, registry, *args, **kwargs):
     cls_or_fn = registry.get(name)
     # --- 在这里把嵌套的 CfgNode 转成普通 dict ---
     cfg = cfgnode_to_dict(cfg)
-    print('DDD',cfg)
     if registry == MODELS:
-        return cls_or_fn(*args,cfg,**kwargs)
-    return cls_or_fn(*args, **cfg, **kwargs)
+        pretrained = cfg.pop("pretrained")
+        return cls_or_fn.from_pretrained(model_type=pretrained, config_args=cfg,**kwargs)
+    else:
+        return cls_or_fn(*args, **cfg, **kwargs)

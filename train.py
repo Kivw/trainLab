@@ -6,7 +6,7 @@ from yacs.config import CfgNode
 from trainlab.config.default_config import cfg as default_cfg
 from trainlab.builder import build_from_cfg, MODELS, TRAINERS, DATASETS
 import torch.multiprocessing as mp 
-
+from transformers import BertTokenizer
 # 注册机制必须再这里导入才能注册成功
 from trainlab.datasets.stackoverflowdataset import StackOverflowDataset
 from trainlab.model.bert import BertForSequenceClassification
@@ -30,7 +30,7 @@ def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=F
         evaluate: 是否在每个 epoch 结束后做评估
     """
     # 每个进程调用 trainer.train 并传入 rank
-    trainer.train(rank=rank, world_size=world_size,train_dataset = train_dataset, val_dataset=val_dataset,evaluate=evaluate)
+    trainer.train(rank=rank, world_size=world_size,train_dataset = train_dataset, val_dataset=val_dataset,collate_fn=train_dataset.collate_fn,evaluate=evaluate)
 
 
 def main():
@@ -50,11 +50,10 @@ def main():
     # 5️⃣ 构建 Dataset / Model / Trainer
     train_dataset = build_from_cfg(cfg.DATASET.TRAIN, DATASETS)
     val_dataset = build_from_cfg(cfg.DATASET.VAL, DATASETS)
-
+    
     model = build_from_cfg(cfg.MODEL, MODELS)
-    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model)
-
-    main()
+    tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
+    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer)
 
     world_size = torch.cuda.device_count()
 

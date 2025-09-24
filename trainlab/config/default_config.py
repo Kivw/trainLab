@@ -17,7 +17,7 @@ _C.MODEL.N_CLASSES = 2
 _C.MODEL.LAYER_NORM_EPS = 1e-12
 _C.MODEL.PAD_TOKEN_ID = 103
 _C.MODEL.RETURN_POOLER_OUTPUT = False
-
+_C.MODEL.PRETRAINED = '/data/lj/task/BERT-LoRA-TensorRT/bert-base-uncased'
 # **********************************Trainer 配置节点**************************************
 _C.TRAINER = CN()
 _C.TRAINER.NAME = 'BERTTrainer'
@@ -27,17 +27,17 @@ _C.TRAINER.SAVE = True
 _C.TRAINER.OUTPUT_DIR = './'
 _C.TRAINER.OUTPUT_FILENAME = 'weight'
 # 优化器配置
-_C.TRAINER.OPTIMIZER_CLASS = 'torch.optim.AdamW'  # 可以改成你的优化器类名
+_C.TRAINER.OPTIMIZER_CLASS = 'AdamW'  # 可以改成你的优化器类名
 _C.TRAINER.OPTIMIZER_KWARGS = CN()
 _C.TRAINER.OPTIMIZER_KWARGS.LR = 5e-5
 _C.TRAINER.OPTIMIZER_KWARGS.WEIGHT_DECAY = 0.01
 # 学习率调度器配置
-_C.TRAINER.SCHEDULER_CLASS = 'torch.optim.lr_scheduler.StepLR'  # 或其他 scheduler
+_C.TRAINER.SCHEDULER_CLASS = 'StepLR'  # 或其他 scheduler
 _C.TRAINER.SCHEDULER_KWARGS = CN()
 _C.TRAINER.SCHEDULER_KWARGS.STEP_SIZE = 1
 _C.TRAINER.SCHEDULER_KWARGS.GAMMA = 0.95
 # 损失函数，可以是字符串或者直接传类名
-_C.TRAINER.LOSS_FN = 'torch.nn.CrossEntropyLoss'
+_C.TRAINER.LOSS_FN = 'CrossEntropyLoss'
 
 # **************************************Dataset 默认配置****************************
 _C.DATASET = CN()

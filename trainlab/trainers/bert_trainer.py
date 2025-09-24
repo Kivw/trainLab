@@ -17,6 +17,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 class BERTTrainer(BaseTrainer):
     def __init__(self, 
                  model, 
+                 tokenizer,
                  loss_fn=None, 
                  epochs=1, 
                  optimizer_class=None, 
@@ -27,7 +28,7 @@ class BERTTrainer(BaseTrainer):
                  output_dir = './',
                  output_filename='weight'):
         super(BERTTrainer, self).__init__(model, loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
-
+        self.tokenizer = tokenizer
 
     def run_one_epoch(self, epoch, data_loader, rank, device, train=True):
         self.model.train() if train else self.model.eval()
@@ -62,16 +63,8 @@ class BERTTrainer(BaseTrainer):
             batch_text["input_labels"] = batch["label"].to(device)
             batch_text["tabular_vectors"] = batch["tabular"].to(device)
 
-            if self.tabular:
-                logits = self.model(
-                    input_ids=batch_text["input_ids"], 
-                    token_type_ids=batch_text["token_type_ids"], 
-                    attention_mask=batch_text["attention_mask"],
-                    tabular_vectors=batch_text["tabular_vectors"],
-                )   
-            
-            else:
-                logits = self.model(
+
+            logits = self.model(
                     input_ids=batch_text["input_ids"], 
                     token_type_ids=batch_text["token_type_ids"], 
                     attention_mask=batch_text["attention_mask"],

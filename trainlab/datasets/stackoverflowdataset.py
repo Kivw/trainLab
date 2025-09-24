@@ -8,7 +8,7 @@ import os
 from .dataset_base import DatasetBase
 from datasets import load_from_disk
 from trainlab.builder import DATASETS
-
+import torch
 @DATASETS.register_module()
 class StackOverflowDataset(DatasetBase):
     name = 'train-sample'
@@ -26,6 +26,15 @@ class StackOverflowDataset(DatasetBase):
         dataset = load_from_disk(path)
         print(type(dataset))
         return dataset
+    
+    def collate_fn(self, batch):
+        """ Instructs how the DataLoader should process the data into a batch"""
+        
+        text = [item['text'] for item in batch]
+        tabular = torch.stack([torch.tensor(item['tabular']) for item in batch])
+        labels = torch.stack([torch.tensor(item['label']) for item in batch])
+
+        return {'text': text, 'tabular': tabular, 'label': labels}
 
 
 
