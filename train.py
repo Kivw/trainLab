@@ -7,10 +7,13 @@ from trainlab.config.default_config import cfg as default_cfg
 from trainlab.builder import build_from_cfg, MODELS, TRAINERS, DATASETS
 import torch.multiprocessing as mp 
 from transformers import BertTokenizer
+from trainlab.utils import Logger
 # 注册机制必须再这里导入才能注册成功
 from trainlab.datasets.stackoverflowdataset import StackOverflowDataset
 from trainlab.model.bert import BertForSequenceClassification
 from trainlab.trainers.bert_trainer import BERTTrainer
+
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -34,6 +37,8 @@ def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=F
 
 
 def main():
+
+    logger = Logger(name="my_train_logger", level="debug", log_dir="./logs").get_logger()
     args = parse_args()
 
     # 1️⃣ 加载默认配置
@@ -54,7 +59,7 @@ def main():
     model = build_from_cfg(cfg.MODEL, MODELS)
     tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
     trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer)
-
+    logger.info(cfg) # 打印日志
     world_size = torch.cuda.device_count()
 
     # spawn 多进程，每个进程执行 train_worker

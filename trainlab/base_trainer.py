@@ -131,7 +131,7 @@ class BaseTrainer:
     def train(self, rank, world_size, train_dataset, val_dataset=None, collate_fn=None, evaluate=False):
         device = self.setup(rank, world_size)
         train_loader = self.prepare_dataloader(train_dataset, rank, world_size, collate_fn=collate_fn)
-        val_loader = self.prepare_dataloader(val_dataset, rank, world_size, collate_fn=collate_fn) if val_dataset else None
+        val_loader = self.prepare_dataloader(val_dataset, rank, world_size,batch_size=2, collate_fn=collate_fn) if val_dataset else None
 
         for epoch in range(self.epochs):
             train_loader.sampler.set_epoch(epoch)

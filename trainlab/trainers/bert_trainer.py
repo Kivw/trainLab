@@ -12,6 +12,9 @@ import torch.nn.functional as F
 from trainlab.base_trainer import BaseTrainer
 from trainlab.builder import TRAINERS
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from trainlab.utils import Logger
+
+Logger = Logger().get_logger()
 
 @TRAINERS.register_module()
 class BERTTrainer(BaseTrainer):
@@ -104,7 +107,7 @@ class BERTTrainer(BaseTrainer):
             avg_loss_epoch = loss_accumulated / len(data_loader)
 
             # print metrics to console
-            print(
+            Logger.info(
                 f"samples={samples_accumulated}, \
                 correct={correct_accumulated}, \
                 acc={round(accuracy, 4)}, \
