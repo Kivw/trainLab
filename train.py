@@ -37,8 +37,10 @@ def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=F
 
 
 def main():
-
-    logger = Logger(name="my_train_logger", level="debug", log_dir="./logs").get_logger()
+    # 多进程日志队列
+    log_queue = mp.Queue()
+    logger_instance = Logger(queue=log_queue,log_dir='./logs')
+    main_logger = logger_instance.get_logger(log_queue,name='main_logger')
     args = parse_args()
 
     # 1️⃣ 加载默认配置
@@ -58,8 +60,8 @@ def main():
     
     model = build_from_cfg(cfg.MODEL, MODELS)
     tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
-    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer)
-    logger.info(cfg) # 打印日志
+    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer,log_queue=log_queue)
+    main_logger.info(cfg) # 打印日志
     world_size = torch.cuda.device_count()
 
     # spawn 多进程，每个进程执行 train_worker

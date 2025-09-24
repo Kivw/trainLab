@@ -12,15 +12,15 @@ import torch.nn.functional as F
 from trainlab.base_trainer import BaseTrainer
 from trainlab.builder import TRAINERS
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from trainlab.utils import Logger
 
-Logger = Logger().get_logger()
+
 
 @TRAINERS.register_module()
 class BERTTrainer(BaseTrainer):
     def __init__(self, 
                  model, 
                  tokenizer,
+                 log_queue,
                  loss_fn=None, 
                  epochs=1, 
                  optimizer_class=None, 
@@ -30,7 +30,7 @@ class BERTTrainer(BaseTrainer):
                  save = True,
                  output_dir = './',
                  output_filename='weight'):
-        super(BERTTrainer, self).__init__(model, loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
+        super(BERTTrainer, self).__init__(model, log_queue,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
         self.tokenizer = tokenizer
 
     def run_one_epoch(self, epoch, data_loader, rank, device, train=True):
@@ -107,7 +107,7 @@ class BERTTrainer(BaseTrainer):
             avg_loss_epoch = loss_accumulated / len(data_loader)
 
             # print metrics to console
-            Logger.info(
+            self.logger.info(
                 f"samples={samples_accumulated}, \
                 correct={correct_accumulated}, \
                 acc={round(accuracy, 4)}, \

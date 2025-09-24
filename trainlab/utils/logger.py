@@ -4,60 +4,71 @@ Date: 2025-09-23
 Version: 0.1
 License: MIT
 """
-
+import os
 import logging
-import sys
+from logging.handlers import QueueHandler, QueueListener
+import torch.multiprocessing as mp
 import time
-from pathlib import Path
-from threading import Lock
 
 class Logger:
-    _instance = None
-    _lock = Lock()  # 确保多线程环境下的单例安全
+    """
+    进程安全 Logger：
+    - 主进程创建 listener 写文件 + 控制台
+    - 子进程只需挂载队列 QueueHandler
+    """
+    def __init__(self, queue, log_dir, level=logging.INFO):
+        """
+        初始化主进程 Logger
+        :param queue: torch.multiprocessing.Queue
+        :param log_dir: 日志文件夹
+        :param level: 日志等级
+        """
+        self.level = level
+        self.queue = queue
 
-    def __new__(cls, *args, **kwargs):
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-        return cls._instance
+        # 自动生成文件名
+        timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+        filename = f"log_{timestamp}.txt"
+        os.makedirs(log_dir, exist_ok=True)
+        file_path = os.path.join(log_dir, filename)
 
-    def __init__(self, name="train_logger", level="info", log_dir="logs", log_file=None):
-        if hasattr(self, "_initialized") and self._initialized:
-            return  # 防止重复初始化
+        # 文件 Handler
+        fh = logging.FileHandler(file_path, encoding="utf-8")
+        fh.setFormatter(logging.Formatter("%(message)s"))
 
-        self.logger = logging.getLogger(name)
-        self.logger.setLevel(getattr(logging, level.upper(), logging.INFO))
-        self.logger.propagate = False  # 避免重复打印
+        # 控制台 Handler
+        ch = logging.StreamHandler()
+        ch.setFormatter(logging.Formatter(
+            "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | "
+            "%(process)d | %(thread)d | %(levelname)s]: %(message)s"
+        ))
 
-        # 创建 log 目录
-        log_path = Path(log_dir)
-        log_path.mkdir(parents=True, exist_ok=True)
+        # QueueListener 同时绑定两个 handler
+        self.listener = QueueListener(self.queue, fh, ch)
+        self.listener.start()
 
-        # 自动生成带时间戳的文件名
-        if log_file is None:
-            timestamp = time.strftime("%Y%m%d_%H%M%S")
-            log_file = log_path / f"training_{timestamp}.log"
-        else:
-            log_file = Path(log_dir) / log_file
+    @staticmethod
+    def get_logger(queue, level=logging.INFO, name=None):
+        """
+        子进程调用：把 QueueHandler 绑定到 logger
+        """
+        logger = logging.getLogger(name)
+        if not any(isinstance(h, QueueHandler) for h in logger.handlers):
+            qh = QueueHandler(queue)
+            qh.setFormatter(logging.Formatter(
+                "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | "
+                "%(process)d | %(thread)d | %(levelname)s]: %(message)s"
+            ))
+            logger.setLevel(level)
+            logger.addHandler(qh)
+        return logger
 
-        # 文件处理器
-        file_handler = logging.FileHandler(log_file, mode="w", encoding="utf-8")
-        file_handler.setLevel(logging.DEBUG)
-        file_formatter = logging.Formatter(
-            "[%(asctime)s][%(levelname)s][%(name)s] %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
-        file_handler.setFormatter(file_formatter)
-        self.logger.addHandler(file_handler)
+    def close(self):
+        """关闭监听器"""
+        if self.listener:
+            self.listener.stop()
+            self.listener = None
 
-        # 控制台处理器
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        console_formatter = logging.Formatter("[%(levelname)s] %(message)s")
-        console_handler.setFormatter(console_formatter)
-        self.logger.addHandler(console_handler)
 
-        self._initialized = True
 
-    def get_logger(self):
-        return self.logger
+

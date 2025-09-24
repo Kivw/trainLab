@@ -12,6 +12,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, DistributedSampler
 import torch.optim as optim
 import torch.optim.lr_scheduler as lr_scheduler
+from trainlab.utils import Logger
 from tqdm import tqdm
 
 SCHEDULER_MAP = {
@@ -51,6 +52,7 @@ class BaseTrainer:
     def __init__(
         self, 
         model, 
+        log_queue,
         loss_fn_class=None, 
         epochs=1, 
         optimizer_class=None, 
@@ -73,7 +75,7 @@ class BaseTrainer:
 
         self.model = model
         self.epochs = epochs
-        
+        self.log_queue = log_queue # log队列
         self.loss_fn = LOSS_FUNCTION_MAP[loss_fn_class]()
 
         self.optimizer_class = OPTIMIZER_MAP[optimizer_class]
@@ -101,8 +103,10 @@ class BaseTrainer:
         """ 初始化 DDP 和每进程优化器/调度器 """
         dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
         device = torch.device(f"cuda:{rank}")
+        
         self.model.to(device)
         self.model = DDP(self.model, device_ids=[rank])
+        self.logger = Logger.get_logger(self.log_queue,name=f'rank{rank}')
 
         if self.optimizer_class:
             self.optimizer = self.optimizer_class(self.model.parameters(), **self.optimizer_kwargs)

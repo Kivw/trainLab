@@ -14,3 +14,8 @@ TrainLab 是一个使用注册器Registry管理的模块化多卡训练框架，
 2. 数据集预处理：'python -m preprocess.stackoverlow'<br>
 3. (模型和dataset已经准备好)<br>
 4. bash scripts/bert_ft.sh 0,1,2,3 path/to/config.yaml<br>
+
+## 开发日志
+- [2025-09-24] v1.0.0
+  - Added: 添加readme.md
+  - Fixed: 修复在多进程下Logger类错乱的问题。
