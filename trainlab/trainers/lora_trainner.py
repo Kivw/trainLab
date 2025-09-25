@@ -4,7 +4,7 @@ Date: 2025-09-24
 Version: 1.0
 License: MIT
 """
-
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,7 +13,7 @@ from trainlab.base_trainer import BaseTrainer
 from trainlab.builder import TRAINERS
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
-from trainlab.module import merge_lora_layers, add_lora_layers,freeze_model
+from trainlab.module import merge_lora_layers, add_lora_layers,freeze_model,unfreeze_model
 
 
 @TRAINERS.register_module()
@@ -22,6 +22,7 @@ class LORATrainer(BaseTrainer):
                  model, 
                  tokenizer,
                  log_queue,
+                 project_name,
                  loss_fn=None, 
                  epochs=1, 
                  optimizer_class=None, 
@@ -31,7 +32,7 @@ class LORATrainer(BaseTrainer):
                  save = True,
                  output_dir = './',
                  output_filename='weight'):
-        super(LORATrainer, self).__init__(model, log_queue,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
+        super(LORATrainer, self).__init__(model, log_queue, project_name,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
         self.tokenizer = tokenizer
        
 
@@ -55,7 +56,7 @@ class LORATrainer(BaseTrainer):
         
 
 
-    def run_one_epoch(self, epoch, data_loader, rank, device, train=True):
+    def run_one_epoch(self, epoch,totoal_epcoh, data_loader, rank, device, train=True):
 
        
         
@@ -144,3 +145,27 @@ class LORATrainer(BaseTrainer):
 
             # 保存最优权重
             self.save_best_model(epoch=epoch, avg_loss_epoch=avg_loss_epoch,train=train)
+
+
+            if epoch == totoal_epcoh and self.file_path!=None:
+                state_dict = torch.load(self.file_path, map_location=device)
+                # state_dict = torch.load(self.file_path)
+                self.model.module.load_state_dict(state_dict["model_state_dict"])
+
+                # merge weights
+                merge_lora_layers(self.model)
+                # ⚠️ merge 后所有 LoRA 权重也移动到 device
+                for p in self.model.parameters():
+                    p.data = p.data.to(device)
+                unfreeze_model(self.model)
+
+
+                # create directory and filepaths
+                dir_path = os.path.dirname(self.file_path)
+        
+                file_path = os.path.join(dir_path,f'lora_weights_merged_{epoch}.pt') 
+
+                # save model
+                torch.save({
+                    'model_state_dict': self.model.module.state_dict() if hasattr(self.model, 'module') else self.model.state_dict()
+                }, file_path)

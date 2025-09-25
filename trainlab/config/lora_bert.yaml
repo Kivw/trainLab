@@ -1,4 +1,5 @@
 TRAINER:
   NAME: 'LORATrainer'
   OUTPUT_DIR: './output'
-  EPOCHS: 10
+  EPOCHS: 2
+  PROJECT_NAME: 'dertlora'

@@ -53,6 +53,7 @@ class BaseTrainer:
         self, 
         model, 
         log_queue,
+        project_name,
         loss_fn_class=None, 
         epochs=1, 
         optimizer_class=None, 
@@ -93,6 +94,8 @@ class BaseTrainer:
         self.eval_loss =  float('inf')
         self.save = save
         self.logger = None
+        self.file_path = None
+        self.project_name = project_name # 项目名称
     
 
 
@@ -116,9 +119,6 @@ class BaseTrainer:
 
         self.model.to(device)
         self.model = DDP(self.model, device_ids=[rank])
-
-      
-
 
         if self.optimizer_class:
             self.optimizer = self.optimizer_class(self.model.parameters(), **self.optimizer_kwargs)
@@ -153,21 +153,21 @@ class BaseTrainer:
         sampler = DistributedSampler(dataset, num_replicas=world_size, rank=rank, shuffle=shuffle)
         return DataLoader(dataset, batch_size=batch_size, sampler=sampler, collate_fn=collate_fn)
 
-    def train(self, rank, world_size, train_dataset, val_dataset=None, collate_fn=None, evaluate=False):
+    def train(self, rank, world_size, train_dataset, batch_size_train, batch_size_eval,val_dataset=None, collate_fn=None, evaluate=False):
         device = self.setup(rank, world_size)
-        train_loader = self.prepare_dataloader(train_dataset, rank, world_size, collate_fn=collate_fn)
-        val_loader = self.prepare_dataloader(val_dataset, rank, world_size,batch_size=2, collate_fn=collate_fn) if val_dataset else None
+        train_loader = self.prepare_dataloader(train_dataset, rank, world_size,batch_size_train, collate_fn=collate_fn)
+        val_loader = self.prepare_dataloader(val_dataset, rank, world_size,batch_size_eval, collate_fn=collate_fn) if val_dataset else None
 
-        for epoch in range(self.epochs):
+        for epoch in range(1,self.epochs+1):
             train_loader.sampler.set_epoch(epoch)
-            self.run_one_epoch(epoch, train_loader, rank, device, train=True)
+            self.run_one_epoch(epoch, self.epochs, train_loader, rank, device, train=True)
 
             if evaluate and val_loader:
-                self.run_one_epoch(epoch, val_loader, rank, device, train=False)
+                self.run_one_epoch(epoch,self.epochs, val_loader, rank, device, train=False)
 
         dist.destroy_process_group()
 
-    def run_one_epoch(self, epoch, data_loader, rank, device, train=True):
+    def run_one_epoch(self, epoch, totoal_epoch, data_loader, rank, device, train=True):
         """ 子类必须实现具体训练/验证逻辑 """
         raise NotImplementedError("子类必须实现 iteration()")
     
@@ -195,26 +195,27 @@ class BaseTrainer:
             train (bool): 是否为训练阶段（True 表示训练阶段，不保存）
         """
         if not self.save or train:
-            print(self.save)
             return
 
         # 只有当当前轮损失更优时才保存
         if avg_loss_epoch >= self.eval_loss:
             return
 
+        # 增加项目目录
+        dir_path = os.path.join(self.output_dir,self.project_name)
         # 创建输出文件夹
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(dir_path, exist_ok=True)
 
         # 新模型保存路径
-        file_path = os.path.join(
-            os.path.abspath(self.output_dir),
+        self.file_path = os.path.join(
+            os.path.abspath(dir_path),
             f"{self.output_filename}_epoch_{epoch}.pt"
         )
 
         # 删除上一个最优模型
         if hasattr(self, 'epoch_best_model') and self.epoch_best_model is not None:
             file_path_prev = os.path.join(
-                os.path.abspath(self.output_dir),
+                os.path.abspath(dir_path),
                 f"{self.output_filename}_epoch_{self.epoch_best_model}.pt"
             )
             if os.path.exists(file_path_prev):
@@ -224,7 +225,7 @@ class BaseTrainer:
         torch.save({
             'model_state_dict': self.model.module.state_dict() if hasattr(self.model, 'module') else self.model.state_dict(),
             'optimizer_state_dict': self.optimizer.state_dict() if self.optimizer else None
-        }, file_path)
+        }, self.file_path)
 
         # 更新最优 loss 和 epoch
         self.eval_loss = avg_loss_epoch

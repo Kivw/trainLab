@@ -40,6 +40,10 @@ def build_from_cfg(cfg, registry, *args, **kwargs):
         raise KeyError("cfg must contain 'NAME' key")
 
     name = cfg.pop('NAME')
+    # 配置文件里面有这个参数，但batchsize通过直接在train()里面传输，这里把他删掉
+    if registry == TRAINERS: 
+        cfg.pop('BATCH_SIZE_TRAIN')
+        cfg.pop('BATCH_SIZE_EVAL')
 
     if not registry.exists(name):
         raise KeyError(f"{name} is not registered in {registry.name}")

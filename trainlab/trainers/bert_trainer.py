@@ -33,7 +33,7 @@ class BERTTrainer(BaseTrainer):
         super(BERTTrainer, self).__init__(model, log_queue,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
         self.tokenizer = tokenizer
 
-    def run_one_epoch(self, epoch, data_loader, rank, device, train=True):
+    def run_one_epoch(self, epoch, total_epoch, data_loader, rank, device, train=True):
         self.model.train() if train else self.model.eval()
        
         # initialize variables
