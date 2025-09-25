@@ -21,8 +21,11 @@ _C.MODEL.PRETRAINED = '/data/lj/task/BERT-LoRA-TensorRT/bert-base-uncased'
 # **********************************Trainer 配置节点**************************************
 _C.TRAINER = CN()
 _C.TRAINER.NAME = 'BERTTrainer'
+_C.TRAINER.PROJECT_NAME = 'betrlora'
 # 基本训练参数
 _C.TRAINER.EPOCHS = 1
+_C.TRAINER.BATCH_SIZE_TRAIN = 8
+_C.TRAINER.BATCH_SIZE_EVAL = 1
 _C.TRAINER.SAVE = True
 _C.TRAINER.OUTPUT_DIR = './'
 _C.TRAINER.OUTPUT_FILENAME = 'weight'

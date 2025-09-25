@@ -14,3 +14,5 @@ OPTS="$@"
 
 # 启动训练
 python -u train.py --cfg $CFG_FILE
+# bash scripts/bert_loar_ft.sh 0,1,2,3,5 /data/lj/task/trainlab/trainlab/config/lora_bert.yaml
+

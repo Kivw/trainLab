@@ -96,6 +96,7 @@ def add_lora_layers(
             ignore_layers: list = A list with the indices of all BERT layers NOT to add LoRA modules 
         """                     
     module_types: Tuple=(nn.Linear,)
+
     
     # disable dropout in frozen layers
     for module in model.modules():
@@ -104,7 +105,7 @@ def add_lora_layers(
     # replace chosen linear modules with lora modules
     for name, module in model.named_children():
         if isinstance(module, module_types) and name in module_names:
-            temp_lora = create_lora(module, r=r, lora_dropout=lora_dropout, lora_alpha=lora_alpha)
+            temp_lora = create_lora(module, r=r, lora_dropout=lora_dropout, lora_alpha=lora_alpha).to(module.weight.device)
             setattr(model, name, temp_lora)  # 将原来的线性层替换为temp_lora           
         else:
             ignore_layers_str = [str(i) for i in ignore_layers]

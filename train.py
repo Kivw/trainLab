@@ -41,20 +41,21 @@ def train_worker(rank, world_size, cfg, log_queue, evaluate=False):
     tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
     trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer,log_queue=log_queue)
     # 每个进程调用 trainer.train 并传入 rank
-    trainer.train(rank=rank, world_size=world_size,train_dataset = train_dataset, val_dataset=val_dataset,collate_fn=train_dataset.collate_fn,evaluate=evaluate)
+    trainer.train(
+        rank=rank, 
+        world_size=world_size, 
+        batch_size_train=cfg.TRAINER.BATCH_SIZE_TRAIN,
+        batch_size_eval=cfg.TRAINER.BATCH_SIZE_EVAL,
+        train_dataset = train_dataset, 
+        val_dataset=val_dataset,
+        collate_fn=train_dataset.collate_fn,
+        evaluate=evaluate)
 
 
 def main():
-    # 多进程日志队列
-    ctx = mp.get_context('spawn')
-    log_queue = ctx.Queue()
-    logger_instance = Logger(queue=log_queue,log_dir='./logs')
-    main_logger = logger_instance.get_logger(log_queue,name='main_logger')
     args = parse_args()
-
     # 1️⃣ 加载默认配置
     cfg = default_cfg.clone()
-
     # 2️⃣ 如果提供 YAML 文件，则合并
     if args.cfg:
         cfg.merge_from_file(args.cfg)
@@ -63,7 +64,12 @@ def main():
     if args.opts:
         cfg.merge_from_list(args.opts)
 
-    
+    # 多进程日志队列
+    ctx = mp.get_context('spawn') # 必须启用spawn上下文初始化queue，不然会报错
+    log_queue = ctx.Queue()
+    logger_instance = Logger(queue=log_queue,log_dir=os.path.join(os.path.abspath('./logs'),cfg.TRAINER.PROJECT_NAME))
+    main_logger = logger_instance.get_logger(log_queue,name='main_logger')
+
     
     main_logger.info(cfg) # 打印日志
     world_size = torch.cuda.device_count()
