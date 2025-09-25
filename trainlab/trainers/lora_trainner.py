@@ -45,9 +45,12 @@ class LORATrainer(BaseTrainer):
             model_to_count = self.model.module if isinstance(self.model, torch.nn.parallel.DistributedDataParallel) else self.model
             n_params = sum(p.numel() for p in model_to_count.parameters())
             n_trainable_params = sum(p.numel() for p in model_to_count.parameters() if p.requires_grad)
-            print(f"Total parameters: {n_params}")
-            print(f"Trainable parameters: {n_trainable_params}")
-            print(f"Percentage trainable: {round(n_trainable_params / n_params * 100, 2)}%")
+            self.logger.info(f"Total parameters: {n_params}")
+            self.logger.info(f"Trainable parameters: {n_trainable_params}")
+            self.logger.info(f"Percentage trainable: {round(n_trainable_params / n_params * 100, 2)}%")
+        
+
+        
                     
         
 

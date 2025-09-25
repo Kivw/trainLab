@@ -23,7 +23,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=False):
+def train_worker(rank, world_size, cfg, log_queue, evaluate=False):
     """
     DDP 多进程训练入口函数
     Args:
@@ -33,14 +33,21 @@ def train_worker(rank, world_size, trainer,train_dataset,val_dataset, evaluate=F
         evaluate: 是否在每个 epoch 结束后做评估
     """
     torch.cuda.empty_cache()
-
+    # 5️⃣ 构建 Dataset / Model / Trainer
+    train_dataset = build_from_cfg(cfg.DATASET.TRAIN, DATASETS)
+    val_dataset = build_from_cfg(cfg.DATASET.VAL, DATASETS)
+    
+    model = build_from_cfg(cfg.MODEL, MODELS)
+    tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
+    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer,log_queue=log_queue)
     # 每个进程调用 trainer.train 并传入 rank
     trainer.train(rank=rank, world_size=world_size,train_dataset = train_dataset, val_dataset=val_dataset,collate_fn=train_dataset.collate_fn,evaluate=evaluate)
 
 
 def main():
     # 多进程日志队列
-    log_queue = mp.Queue()
+    ctx = mp.get_context('spawn')
+    log_queue = ctx.Queue()
     logger_instance = Logger(queue=log_queue,log_dir='./logs')
     main_logger = logger_instance.get_logger(log_queue,name='main_logger')
     args = parse_args()
@@ -56,23 +63,21 @@ def main():
     if args.opts:
         cfg.merge_from_list(args.opts)
 
-    # 5️⃣ 构建 Dataset / Model / Trainer
-    train_dataset = build_from_cfg(cfg.DATASET.TRAIN, DATASETS)
-    val_dataset = build_from_cfg(cfg.DATASET.VAL, DATASETS)
     
-    model = build_from_cfg(cfg.MODEL, MODELS)
-    tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
-    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer,log_queue=log_queue)
+    
     main_logger.info(cfg) # 打印日志
     world_size = torch.cuda.device_count()
 
     # spawn 多进程，每个进程执行 train_worker
     mp.spawn(
         train_worker,
-        args=(world_size, trainer, train_dataset, val_dataset, True),  # 这里 rank 会自动传入
+        args=(world_size, cfg, log_queue, True),  # 这里 rank 会自动传入
         nprocs=world_size,
         join=True
     )
+
+
+    logger_instance.close() # 关闭日志相关工具
 
 
 if __name__ == "__main__":

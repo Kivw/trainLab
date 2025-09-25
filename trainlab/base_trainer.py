@@ -90,8 +90,9 @@ class BaseTrainer:
         self.output_dir = output_dir
         self.output_filename = output_filename
         self.epoch_best_model = None
-        self.eval_loss = 0.
+        self.eval_loss =  float('inf')
         self.save = save
+        self.logger = None
     
 
 
@@ -105,14 +106,18 @@ class BaseTrainer:
         """ 初始化 DDP 和每进程优化器/调度器 """
         dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
         device = torch.device(f"cuda:{rank}")
-        self.logger = Logger.get_logger(self.log_queue,name=f'rank{rank}')
+        if rank == 0:
+            self.logger = Logger.get_logger(self.log_queue, name=f"rank{rank}_pid{os.getpid()}")
+        else:
+            self.logger = None
+
         # 调用自定义初始化钩子
         self.custom_setup(rank, world_size)
 
         self.model.to(device)
         self.model = DDP(self.model, device_ids=[rank])
-        
 
+      
 
 
         if self.optimizer_class:
@@ -190,6 +195,7 @@ class BaseTrainer:
             train (bool): 是否为训练阶段（True 表示训练阶段，不保存）
         """
         if not self.save or train:
+            print(self.save)
             return
 
         # 只有当当前轮损失更优时才保存

@@ -14,15 +14,9 @@ class Logger:
     """
     进程安全 Logger：
     - 主进程创建 listener 写文件 + 控制台
-    - 子进程只需挂载队列 QueueHandler
+    - 子进程只挂载 QueueHandler
     """
     def __init__(self, queue, log_dir, level=logging.INFO):
-        """
-        初始化主进程 Logger
-        :param queue: torch.multiprocessing.Queue
-        :param log_dir: 日志文件夹
-        :param level: 日志等级
-        """
         self.level = level
         self.queue = queue
 
@@ -39,28 +33,27 @@ class Logger:
         # 控制台 Handler
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter(
-            "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | "
-            "%(process)d | %(thread)d | %(levelname)s]: %(message)s"
+            "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | %(levelname)s]: %(message)s"
         ))
 
-        # QueueListener 同时绑定两个 handler
+        # QueueListener 绑定两个 handler
         self.listener = QueueListener(self.queue, fh, ch)
         self.listener.start()
-
+    
     @staticmethod
     def get_logger(queue, level=logging.INFO, name=None):
-        """
-        子进程调用：把 QueueHandler 绑定到 logger
-        """
         logger = logging.getLogger(name)
-        if not any(isinstance(h, QueueHandler) for h in logger.handlers):
+        if not getattr(logger, "_queue_handler_set", False):
             qh = QueueHandler(queue)
             qh.setFormatter(logging.Formatter(
-                "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | "
-                "%(process)d | %(thread)d | %(levelname)s]: %(message)s"
+                "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | %(levelname)s]: %(message)s"
             ))
-            logger.setLevel(level)
             logger.addHandler(qh)
+            logger.setLevel(level)
+            logger._queue_handler_set = True
+
+        # 阻止日志传播到 root logger，避免重复打印
+        logger.propagate = False
         return logger
 
     def close(self):
