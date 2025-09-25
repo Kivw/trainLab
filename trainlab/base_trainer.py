@@ -90,8 +90,11 @@ class BaseTrainer:
         self.output_dir = output_dir
         self.output_filename = output_filename
         self.epoch_best_model = None
-        self.eval_loss = 0.
+        self.eval_loss =  float('inf')
         self.save = save
+        self.logger = None
+    
+
 
     def setup(self, rank, world_size):
         os.environ['MASTER_ADDR'] = 'localhost'
@@ -103,17 +106,35 @@ class BaseTrainer:
         """ 初始化 DDP 和每进程优化器/调度器 """
         dist.init_process_group(backend="nccl", rank=rank, world_size=world_size)
         device = torch.device(f"cuda:{rank}")
-        
+        if rank == 0:
+            self.logger = Logger.get_logger(self.log_queue, name=f"rank{rank}_pid{os.getpid()}")
+        else:
+            self.logger = None
+
+        # 调用自定义初始化钩子
+        self.custom_setup(rank, world_size)
+
         self.model.to(device)
         self.model = DDP(self.model, device_ids=[rank])
-        self.logger = Logger.get_logger(self.log_queue,name=f'rank{rank}')
+
+      
+
 
         if self.optimizer_class:
             self.optimizer = self.optimizer_class(self.model.parameters(), **self.optimizer_kwargs)
         if self.scheduler_class and self.optimizer:
             self.scheduler = self.scheduler_class(self.optimizer, **self.scheduler_kwargs)
+
+        
         
         return device
+    
+    def custom_setup(self, rank, world_size):
+        """
+        默认实现：什么都不做
+        子类可以重写此函数，执行特定初始化操作
+        """
+        pass
 
     def reduce_value(self, value, average=True):
         """ 多卡同步指标 """
@@ -174,6 +195,7 @@ class BaseTrainer:
             train (bool): 是否为训练阶段（True 表示训练阶段，不保存）
         """
         if not self.save or train:
+            print(self.save)
             return
 
         # 只有当当前轮损失更优时才保存

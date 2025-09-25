@@ -1,0 +1,4 @@
+TRAINER:
+  NAME: 'LORATrainer'
+  OUTPUT_DIR: './output'
+  EPOCHS: 10

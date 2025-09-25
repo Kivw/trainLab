@@ -17,14 +17,13 @@ class StackOverflowDataset(DatasetBase):
         super().__init__(transform, cache_in_memory)
 
         self.data_dir = os.path.join(root, self.name, split)
-        self.data = self.load_data(self.data_dir)
+        self.data = self.load_data(self.data_dir).select(range(100))
 
     def load_data(self, path):
         if not os.path.exists(path):
             raise FileNotFoundError(f"Dataset path not found: {path}")
 
         dataset = load_from_disk(path)
-        print(type(dataset))
         return dataset
     
     def collate_fn(self, batch):
