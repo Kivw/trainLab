@@ -19,3 +19,6 @@ TrainLab 是一个使用注册器Registry管理的模块化多卡训练框架，
 - [2025-09-24] v1.0.0
   - Added: 添加readme.md
   - Fixed: 修复在多进程下Logger类错乱的问题。
+- [2025-09-25] v1.0.0
+  - ADDed: 添加lora功能
+  - Fiexed: 修复多进程下Logger错乱问题。
