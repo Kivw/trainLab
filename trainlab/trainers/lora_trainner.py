@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from trainlab.base_trainer import BaseTrainer
 from trainlab.builder import TRAINERS
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
+from transformers import BertTokenizer
 from trainlab.module import merge_lora_layers, add_lora_layers,freeze_model,unfreeze_model
 
 
@@ -20,7 +20,7 @@ from trainlab.module import merge_lora_layers, add_lora_layers,freeze_model,unfr
 class LORATrainer(BaseTrainer):
     def __init__(self, 
                  model, 
-                 tokenizer,
+                 model_name_or_path,
                  log_queue,
                  project_name,
                  loss_fn=None, 
@@ -33,7 +33,7 @@ class LORATrainer(BaseTrainer):
                  output_dir = './',
                  output_filename='weight'):
         super(LORATrainer, self).__init__(model, log_queue, project_name,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
-        self.tokenizer = tokenizer
+        self.tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
        
 
 
@@ -134,7 +134,8 @@ class LORATrainer(BaseTrainer):
 
             # print metrics to console
             self.logger.info(
-                f"samples={samples_accumulated}, \
+                f"epoch={epoch},\
+                samples={samples_accumulated}, \
                 correct={correct_accumulated}, \
                 acc={round(accuracy, 4)}, \
                 recall={round(recall, 4)}, \
@@ -169,3 +170,6 @@ class LORATrainer(BaseTrainer):
                 torch.save({
                     'model_state_dict': self.model.module.state_dict() if hasattr(self.model, 'module') else self.model.state_dict()
                 }, file_path)
+
+    def evalution(self, epoch,totoal_epcoh, data_loader, rank, device, train=False):
+        self.run_one_epoch(epoch,totoal_epcoh, data_loader, rank, device, train=False)
