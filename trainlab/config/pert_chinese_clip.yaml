@@ -12,7 +12,7 @@ TRAINER:
   # 优化器配置
   OPTIMIZER_CLASS: AdamW # 优化器类名
   OPTIMIZER_KWARGS: # 优化器参数
-    LR: 5e-5
+    LR: 4e-4
   # 学习率调度器配置
   SCHEDULER_CLASS: 'CosineAnnealingLR' # 学习率调度器类名
   LOSS_FN: 'CrossEntropyLoss'
