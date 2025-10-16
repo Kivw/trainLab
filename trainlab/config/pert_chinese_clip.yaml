@@ -1,0 +1,33 @@
+MODEL:
+  NAME: TransformersModelWrapper
+  PRETRAINED: "/data/lj/task/model_zoo/chinese-clip-vit-base-path16"
+
+TRAINER:
+  NAME: 'PEFTCLIPTrainer'
+  OUTPUT_DIR: './output'
+  EPOCHS: 30
+  PROJECT_NAME: 'pert_chinese_clip' # 项目名称，用于日志记录
+  BATCH_SIZE_TRAIN: 16
+  OUTPUT_FILENAME: 'clip_pert_lora'
+  # 优化器配置
+  OPTIMIZER_CLASS: AdamW # 优化器类名
+  OPTIMIZER_KWARGS: # 优化器参数
+    LR: 4e-4
+  # 学习率调度器配置
+  SCHEDULER_CLASS: 'CosineAnnealingLR' # 学习率调度器类名
+  LOSS_FN: 'CrossEntropyLoss'
+
+
+DATASET:
+  TRAIN:
+    NAME: 'UCF101Dataset'
+    ROOT: "/data/lj/task/CoOp/data"
+    SPLIT: "train"
+    TRANSFORM: None
+    CACHE_IN_MEMORY: None
+  VAL:
+    NAME: 'UCF101Dataset'
+    ROOT: "/data/lj/task/CoOp/data"
+    SPLIT: "val"
+    TRANSFORM: None
+    CACHE_IN_MEMORY: None

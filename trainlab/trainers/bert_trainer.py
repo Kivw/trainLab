@@ -12,14 +12,14 @@ import torch.nn.functional as F
 from trainlab.base_trainer import BaseTrainer
 from trainlab.builder import TRAINERS
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-
+from transformers import BertTokenizer
 
 
 @TRAINERS.register_module()
 class BERTTrainer(BaseTrainer):
     def __init__(self, 
                  model, 
-                 tokenizer,
+                 model_name_or_path,
                  log_queue,
                  loss_fn=None, 
                  epochs=1, 
@@ -31,7 +31,7 @@ class BERTTrainer(BaseTrainer):
                  output_dir = './',
                  output_filename='weight'):
         super(BERTTrainer, self).__init__(model, log_queue,loss_fn, epochs, optimizer_class, optimizer_kwargs, scheduler_class, scheduler_kwargs,save,output_dir, output_filename)
-        self.tokenizer = tokenizer
+        self.tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
 
     def run_one_epoch(self, epoch, total_epoch, data_loader, rank, device, train=True):
         self.model.train() if train else self.model.eval()

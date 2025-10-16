@@ -6,13 +6,16 @@ from yacs.config import CfgNode
 from trainlab.config.default_config import cfg as default_cfg
 from trainlab.builder import build_from_cfg, MODELS, TRAINERS, DATASETS
 import torch.multiprocessing as mp 
-from transformers import BertTokenizer
+
 from trainlab.utils import Logger
 # 注册机制必须再这里导入才能注册成功
 from trainlab.datasets.stackoverflowdataset import StackOverflowDataset
 from trainlab.model.bert import BertForSequenceClassification
+from trainlab.model.transformers_model_warpper import TransformersModelWrapper
 from trainlab.trainers.bert_trainer import BERTTrainer
 from trainlab.trainers.lora_trainner import LORATrainer
+from trainlab.trainers.peft_CLIP_trainer import PEFTCLIPTrainer
+from trainlab.datasets.ucf101_dataset import UCF101Dataset
 
 
 def parse_args():
@@ -38,8 +41,14 @@ def train_worker(rank, world_size, cfg, log_queue, evaluate=False):
     val_dataset = build_from_cfg(cfg.DATASET.VAL, DATASETS)
     
     model = build_from_cfg(cfg.MODEL, MODELS)
-    tokenizer =  BertTokenizer.from_pretrained(cfg.MODEL.PRETRAINED)
-    trainer = build_from_cfg(cfg.TRAINER, TRAINERS, model=model,tokenizer=tokenizer,log_queue=log_queue)
+
+    trainer = build_from_cfg(
+        cfg.TRAINER, 
+        TRAINERS, 
+        model=model,
+        model_name_or_path=cfg.MODEL.PRETRAINED,
+        log_queue=log_queue)
+    
     # 每个进程调用 trainer.train 并传入 rank
     trainer.train(
         rank=rank, 

@@ -123,7 +123,11 @@ class BaseTrainer:
         if self.optimizer_class:
             self.optimizer = self.optimizer_class(self.model.parameters(), **self.optimizer_kwargs)
         if self.scheduler_class and self.optimizer:
-            self.scheduler = self.scheduler_class(self.optimizer, **self.scheduler_kwargs)
+            self.scheduler = self.scheduler_class(
+                self.optimizer, 
+                T_max=self.scheduler_kwargs['t_max'],  # 改为大写 T_max
+                eta_min=self.scheduler_kwargs.get('eta_min', 0)
+            )
 
         
         
@@ -159,13 +163,13 @@ class BaseTrainer:
         val_loader = self.prepare_dataloader(val_dataset, rank, world_size,batch_size_eval, collate_fn=collate_fn) if val_dataset else None
 
         for epoch in range(1,self.epochs+1):
-            train_loader.sampler.set_epoch(epoch)
+            train_loader.sampler.set_epoch(epoch) # 每个epoch调用一次，shuffle, 防止每个epoch数据顺序一样
             self.run_one_epoch(epoch, self.epochs, train_loader, rank, device, train=True)
 
             if evaluate and val_loader:
                 self.run_one_epoch(epoch,self.epochs, val_loader, rank, device, train=False)
 
-        dist.destroy_process_group()
+        dist.destroy_process_group() # 清理环境
 
     def run_one_epoch(self, epoch, totoal_epoch, data_loader, rank, device, train=True):
         """ 子类必须实现具体训练/验证逻辑 """

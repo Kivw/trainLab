@@ -33,7 +33,7 @@ class Logger:
         # 控制台 Handler
         ch = logging.StreamHandler()
         ch.setFormatter(logging.Formatter(
-            "[%(asctime)s | %(name)s | %(filename)s:%(lineno)d | %(levelname)s]: %(message)s"
+            "[%(asctime)s | %(levelname)s]: %(message)s"
         ))
 
         # QueueListener 绑定两个 handler

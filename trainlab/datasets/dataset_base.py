@@ -8,7 +8,7 @@ import torch
 from torch.utils.data import Dataset
 from torch.utils.data import IterableDataset
 from datasets import load_from_disk
-
+from trainlab.utils.tools import check_isfile
 
 class DatasetBase(Dataset):
     """
@@ -113,3 +113,40 @@ class IterableDatasetBase(IterableDataset):
         默认使用 PyTorch 的 default_collate
         """
         return torch.utils.data._utils.collate.default_collate(batch)
+    
+
+class Datum:
+    """Data instance which defines the basic attributes.
+
+    Args:
+        impath (str): image path.
+        label (int): class label.
+        domain (int): domain label.
+        classname (str): class name.
+    """
+
+    def __init__(self, impath="", label=0, domain=0, classname=""):
+        assert isinstance(impath, str)
+        assert check_isfile(impath)
+
+        self._impath = impath
+        self._label = label
+        self._domain = domain
+        self._classname = classname
+        # print(f"Datum created: {self.impath}, {self.label}, {self.classname}")
+
+    @property
+    def impath(self):
+        return self._impath
+
+    @property
+    def label(self):
+        return self._label
+
+    @property
+    def domain(self):
+        return self._domain
+
+    @property
+    def classname(self):
+        return self._classname
